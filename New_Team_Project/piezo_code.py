@@ -1,6 +1,6 @@
 import time
 
-from Team_Project.New_Team_Project import PWM_Piezo
+from New_Team_Project import PWM_Piezo
 
 
 def piezo_action():

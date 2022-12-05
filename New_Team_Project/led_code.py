@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 
-from Team_Project.New_Team_Project import PWM_RED, PWM_GREEN, PWM_BLUE, LEVEL, rgb_color, led_speed
+from __init__ import PWM_RED, PWM_GREEN, PWM_BLUE, LEVEL, rgb_color, led_speed
 
 
 def setRGB(r, g, b):
