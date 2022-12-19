@@ -6,7 +6,7 @@ import time
 # 코드 분석해보시게나
 
 port = '/dev/ttyACM0'
-brate = 9600    # boudrate
+brate = 9600    # boudrate, 아두이노는 9600
 cmd = 'temp'
 
 a = 1

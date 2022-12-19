@@ -21,6 +21,7 @@ def MQ7_detect():
     # 필요하다면 port, brate 을 global로 설정하던가
     global CO_STATE
     global LEVEL
+    global content
 
     # CO_STATE 값 측정
     # 근데 이게 값이 조금 이상하게 측정이 됨
@@ -28,25 +29,29 @@ def MQ7_detect():
     # CO 수치에 따른 LEVEL 설정
     while True:
         mq7_seri = serial.Serial(mq7_port, baudrate=brate, timeout=None)
-        print(mq7_seri.name)
+        # print(mq7_seri.name)
         mq7_seri.write(mq7_cmd.encode())
 
         if mq7_seri.in_waiting != 0:
             content = mq7_seri.readline()
-            print(content[:-2].decode())        # 이건 나중에 지워
-            CO_STATE = content[:-2].decode()
-            time.sleep(0.5)
+            if (content != ""):
+                # print(content[:-2].decode())        # 이건 나중에 지워
+                # print(content)
+                if (content[:-2].decode() != ""):
+                    CO_STATE = float(content[:-2].decode())
+                    print(CO_STATE)
+                    time.sleep(0.01)
 
         # 값은 이후 실험에 의해 수정
-        if (28 > CO_STATE):
+        if (4 > CO_STATE):
             LEVEL = 0
-        elif (40 > CO_STATE):
+        elif (5 > CO_STATE):
             LEVEL = 1
-        elif (60 > CO_STATE):
+        elif (6 > CO_STATE):
             LEVEL = 2
         else:
             LEVEL = 3
-        time.sleep(1)
+        time.sleep(0.5)
 
 
 #### LED ####
@@ -62,11 +67,7 @@ def led_action():
     global rgb_color
     global led_speed
 
-    # 1단계, 2단계, 3단계 LED가 켜지는 시간을 조절할 것 (led_speed)
     while True:
-        # 근데 변수를 다 global로 빼면 if문으로 안나눠도 되긴하는데...
-        # 코드의 효율성 측면은 나중에 고려. 일단은 동작여부 우선
-        # 나중에 기회가 된다면 elif안의 중복되는 코드를 함수로 빼도 될듯
         if (LEVEL == 0):
             setRGB(0, 0, 0)
         elif (LEVEL == 1):
@@ -90,7 +91,6 @@ def led_action():
 def piezo_action():
     global LEVEL
 
-    # 구체적인 소리의 Frequency수 조정 필요
     while True:
         if (LEVEL == 0):
             PWM_Piezo.ChangeDutyCycle(0)
@@ -102,13 +102,13 @@ def piezo_action():
             PWM_Piezo.ChangeDutyCycle(0)
             time.sleep(1)
         elif (LEVEL == 2):
-            PWM_Piezo.ChangeDutyCycle(20)
+            PWM_Piezo.ChangeDutyCycle(30)
             PWM_Piezo.ChangeFrequency(329)
-            time.sleep(1)
+            time.sleep(0.5)
             PWM_Piezo.ChangeDutyCycle(0)
-            time.sleep(1)
+            time.sleep(0.5)
         elif (LEVEL == 3):
-            PWM_Piezo.ChangeDutyCycle(20)
+            PWM_Piezo.ChangeDutyCycle(35)
             PWM_Piezo.ChangeFrequency(392)
             time.sleep(1)
 
@@ -143,8 +143,6 @@ def lcd_show():
     global LEVEL
 
     while True:
-        # while문? sleep를 해야하는가? -> 이후 직접 실행해서 판단
-        # 화면이 깜빡이는 문제 해결해야 함
         line1 = "CO state: " + str(CO_STATE)
         line2 = "Danger Level: " + str(LEVEL)
 
@@ -156,10 +154,10 @@ def lcd_show():
 
 #### DC Motor ####
 # 시리얼 통신이라 한 번만 실행 되기만 하면 아두이노에서 도는 방식이라면 쓰레드로 구현 안해도 될 듯
-def dcmotor_action():
-    dc_com = serial.Serial(port="/dev/ttyACM0", baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, timeout=1)
-    dc_text = "Serial DC Motor"
-    dc_com.write(dc_text.encode())
+# def dcmotor_action():
+#     dc_com = serial.Serial(port="/dev/ttyACM0", baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, timeout=1)
+#     dc_text = "Serial DC Motor"
+#     dc_com.write(dc_text.encode())
 
 
 #### Tactile Button ####
@@ -187,6 +185,7 @@ GPIO.setmode(GPIO.BCM)
 
 CO_STATE = 0
 LEVEL = 0
+content = 0
 
 mq7_port = '/dev/ttyACM0'
 brate = 9600    # boudrate
@@ -237,9 +236,9 @@ PWM_Vib.start(7.5)
 # lcd_show()함수에서 구현 다 함
 
 #### DC Motor ####
-dc_port = "/dev/ttyACM0"
+# dc_port = "/dev/ttyACM0"
 # dc_brate = 9700    # boudrate
-cd_cmd = "temp"
+# cd_cmd = "temp"
 
 
 #### Tactile Button ####
@@ -258,8 +257,8 @@ try:
     # 쓰레드 실행
     # 필요 쓰레드: mq7, led, piezo, vibration, lcd, dc motor, tact button, fan
 
-    # thread0_MQ7 = threading.Thread(target=MQ7_detect, daemon=True)
-    # thread0_MQ7.start()
+    thread0_MQ7 = threading.Thread(target=MQ7_detect, daemon=True)
+    thread0_MQ7.start()
     thread1_LED = threading.Thread(target=led_action, daemon=True)
     thread1_LED.start()
     thread2_PIEZO = threading.Thread(target=piezo_action, daemon=True)
@@ -281,10 +280,10 @@ try:
     while True:
 
         # MQ7미완, 일단은 사용자 input으로 값을 받아 실험
-        LEVEL = int(input("Enter the Level: "))
+        # LEVEL = int(input("Enter the Level: "))
 
         # LEVEL 값에 따른 작동
-        if (LEVEL == 0):    # 없애도 될듯?
+        if (LEVEL == 0):
             temp = 0        # 그냥 적어놓은 코드
 
         #### 1단계 ####
